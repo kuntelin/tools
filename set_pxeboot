@@ -1,0 +1,41 @@
+#!/bin/bash
+
+BMC_USERNAME="admin"
+BMC_PASSWORD="admin"
+BMC_IP_ADDRESS="${1}"
+
+## check BMC IP Address is given
+if [ "x${1}" == "x" ]
+then
+    echo "You must give BMC IP address"
+    exit 1
+fi
+
+## check BMC IP Address valid and exist
+ping -c 1 ${BMC_IP_ADDRESS} &>/dev/null
+if [ $? -ne 0 ]
+then
+    echo "BMC IP Address is not valid or not exist"
+    exit 2
+fi
+
+echo "Set PXE boot"
+ipmitool -U ${BMC_USERNAME} -P ${BMC_PASSWORD} -H ${BMC_IP_ADDRESS} chassis bootdev pxe
+
+echo "Reboot server"
+POWER_STATUS=$( ipmitool -U ${BMC_USERNAME} -P ${BMC_PASSWORD} -H ${BMC_IP_ADDRESS} power status | awk '{ print $4 }' )
+if [ "${POWER_STATUS}" == "off" ]
+then
+    ## force server power on
+    ipmitool -U ${BMC_USERNAME} -P ${BMC_PASSWORD} -H ${BMC_IP_ADDRESS} power on &>/dev/null
+    sleep 10
+fi
+ipmitool -U ${BMC_USERNAME} -P ${BMC_PASSWORD} -H ${BMC_IP_ADDRESS} power reset &>/dev/null
+sleep 10
+
+
+echo "Current power status"
+ipmitool -U ${BMC_USERNAME} -P ${BMC_PASSWORD} -H ${BMC_IP_ADDRESS} power status
+
+echo "DONE!!!!!"
+
